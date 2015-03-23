@@ -314,8 +314,53 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
           legal moves.
         """
         "*** YOUR CODE HERE ***"
+        score = -(float("inf"))
+        numAgents = gameState.getNumAgents()
+        numGhost = numAgents - 1
+        legalmoves = gameState.getLegalActions(0)
+        bestMove = "Stop"
         
-        util.raiseNotDefined()
+        def maxValue(gameState, profondeur):
+           
+            if gameState.isWin() or gameState.isLose() or profondeur == 0:
+                return self.evaluationFunction(gameState)
+            
+            score = -(float("inf"))
+            legalmoves = gameState.getLegalActions(0)
+            for action in legalmoves:
+                successorGameState = gameState.generateSuccessor(0,action)
+                score = max(score, expValue(successorGameState,profondeur, 1))
+            return score
+            
+        
+        def expValue(gameState,profondeur,agentIndex) :
+           
+            if gameState.isWin() or gameState.isLose() or profondeur == 0:
+                return self.evaluationFunction(gameState)
+            score = 0
+            legalmoves = gameState.getLegalActions(agentIndex)
+            p = 1.0 / len(legalmoves)
+            for action in legalmoves:
+                successorGameState = gameState.generateSuccessor(agentIndex,action)
+                if agentIndex == numGhost:
+                    score += p * maxValue(successorGameState, profondeur -1)
+                else:
+                    score += p * expValue(successorGameState, profondeur, agentIndex + 1)
+            return score
+                    
+                    
+        for action in legalmoves:
+            successorGameState = gameState.generateSuccessor(0, action)
+            prevscore = score
+            score = max( score, expValue(successorGameState, self.depth, 1))
+            """print "========="
+            print "action ", action
+            print "score ", score
+            print "========="""
+            if score > prevscore:
+                bestMove = action
+   
+        return bestMove
 
 def betterEvaluationFunction(currentGameState):
     """
@@ -324,8 +369,59 @@ def betterEvaluationFunction(currentGameState):
 
       DESCRIPTION: <write something here so we know what you did>
     """
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    score = currentGameState.getScore()
+    if currentGameState.isLose():
+        return -9999
+    
+    elif currentGameState.isWin():
+        return score + 500
+    
+    
+    distanceList = []
+    foods = currentGameState.getFood()
+    pos = currentGameState.getPacmanPosition()
+    for x in range(foods.width):
+        for y in range(foods.height):
+            if foods[x][y] == True:
+                if pos != (x,y):
+                    distanceList.append(manhattanDistance(pos, (x,y)))
+    
+    ghostStates = currentGameState.getGhostStates()
+    newScaredTimes = [ghostState.scaredTimer for ghostState in ghostStates]
+    capsulePos = currentGameState.getCapsules()     
+    distPacmanGhost = manhattanDistance(pos, ghostStates[0].getPosition())
+    capsulePos = currentGameState.getCapsules()     
+    distCapsList = []
+#     for capsule in capsulePos:
+#         distCapsList.append(manhattanDistance(pos, list(capsule) ))
+#     score += 1 / min(distCapsList)*10
+    score -= len(capsulePos) * 9
+    score -= len(foods.asList()) *3.5
+    if len(distanceList) == 0:
+        return score + 500
+    if newScaredTimes[0] > 0 :
+        distanceList.append(distPacmanGhost)
+        
+    closestfood  = min(distanceList)
+    score -= closestfood*1.5
+
+    if newScaredTimes[0] > 0 :
+        return score
+    
+    if distPacmanGhost < 2:
+        if newScaredTimes[0] > 0 :
+            return score
+        else:
+            return -9999
+    if distPacmanGhost > 4:
+        score += distPacmanGhost
+    else:
+        score += 4
+   
+    return score
+    
+        
+ 
 
 # Abbreviation
 better = betterEvaluationFunction
